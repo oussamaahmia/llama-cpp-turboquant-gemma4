@@ -506,6 +506,7 @@ class VISION_PROJECTOR_TYPE(IntEnum):
     GEMMA3N   = auto()
     GEMMA3    = auto()
     QWEN3VL   = auto()
+    STEP3VL   = auto()
     COGVLM    = auto()
 
 
@@ -734,6 +735,7 @@ class MODEL_TENSOR(IntEnum):
     V_LAYER_OUT_SCALE    = auto()
     V_PRE_NORM           = auto()
     V_POST_NORM          = auto()
+    V_MM_PRE_NORM        = auto() # hunyuanocr
     V_MM_POST_NORM       = auto()
     V_MM_INP_NORM        = auto()
     V_MM_INP_PROJ        = auto() # gemma3
@@ -769,6 +771,8 @@ class MODEL_TENSOR(IntEnum):
     V_MM_GATE            = auto() # cogvlm
     V_TOK_BOI            = auto() # cogvlm
     V_TOK_EOI            = auto() # cogvlm
+    V_TOK_IMG_BEGIN      = auto() # hunyuanocr
+    V_TOK_IMG_END        = auto() # hunyuanocr
     V_STD_BIAS           = auto() # gemma4
     V_STD_SCALE          = auto() # gemma4
     V_SAM_POS_EMBD       = auto() # Deepseek-OCR
@@ -984,6 +988,8 @@ VISION_PROJECTOR_TYPE_NAMES: dict[VISION_PROJECTOR_TYPE, str] = {
     VISION_PROJECTOR_TYPE.GLM_EDGE:  "adapter",
     VISION_PROJECTOR_TYPE.MERGER:    "qwen2vl_merger",
     VISION_PROJECTOR_TYPE.GEMMA3:    "gemma3",
+    VISION_PROJECTOR_TYPE.QWEN3VL:   "qwen3vl_merger",
+    VISION_PROJECTOR_TYPE.STEP3VL:   "step3vl",
 }
 
 TENSOR_NAMES: dict[MODEL_TENSOR, str] = {
@@ -1246,6 +1252,9 @@ TENSOR_NAMES: dict[MODEL_TENSOR, str] = {
     MODEL_TENSOR.V_MM_GATE:                 "mm.gate",
     MODEL_TENSOR.V_TOK_BOI:                 "v.boi",
     MODEL_TENSOR.V_TOK_EOI:                 "v.eoi",
+    MODEL_TENSOR.V_MM_PRE_NORM:             "mm.pre_norm",
+    MODEL_TENSOR.V_TOK_IMG_BEGIN:           "mm.image_begin",
+    MODEL_TENSOR.V_TOK_IMG_END:             "mm.image_end",
     MODEL_TENSOR.V_STD_BIAS:                "v.std_bias", # gemma4
     MODEL_TENSOR.V_STD_SCALE:               "v.std_scale", # gemma4
     # DeepSeek-OCR SAM
@@ -1393,6 +1402,9 @@ MODEL_TENSORS: dict[MODEL_ARCH, list[MODEL_TENSOR]] = {
         MODEL_TENSOR.V_MM_GATE,
         MODEL_TENSOR.V_TOK_BOI,
         MODEL_TENSOR.V_TOK_EOI,
+        MODEL_TENSOR.V_MM_PRE_NORM,
+        MODEL_TENSOR.V_TOK_IMG_BEGIN,
+        MODEL_TENSOR.V_TOK_IMG_END,
         MODEL_TENSOR.V_STD_BIAS,
         MODEL_TENSOR.V_STD_SCALE,
         MODEL_TENSOR.V_SAM_POS_EMBD,
@@ -3989,6 +4001,7 @@ class GGMLQuantizationType(IntEnum):
     NVFP4   = 40
     TQ3_1S  = 44
     TQ4_1S  = 45
+    Q1_0    = 41
 
 
 class ExpertGatingFuncType(IntEnum):
@@ -4044,6 +4057,7 @@ class LlamaFileType(IntEnum):
     MOSTLY_NVFP4         = 39  # except 1d tensors
     MOSTLY_TQ3_1S        = 43  # except 1d tensors
     MOSTLY_TQ4_1S        = 44  # except 1d tensors
+    MOSTLY_Q1_0          = 40  # except 1d tensors
 
     GUESSED              = 1024  # not specified in the model file
 
@@ -4098,12 +4112,14 @@ class VisionProjectorType:
     QWEN2VL = "qwen2vl_merger"
     QWEN25VL = "qwen2.5vl_merger"
     QWEN3VL = "qwen3vl_merger"
+    STEP3VL = "step3vl"
     ULTRAVOX = "ultravox"
     INTERNVL = "internvl"
     QWEN2A = "qwen2a" # audio
     GLMA = "glma" # audio
     QWEN25O = "qwen2.5o" # omni
     VOXTRAL = "voxtral"
+    MERALION = "meralion"  # audio: Whisper + gated MLP adaptor
     LFM2 = "lfm2"
     KIMIVL = "kimivl"
     PADDLEOCR = "paddleocr"
@@ -4111,12 +4127,14 @@ class VisionProjectorType:
     LIGHTONOCR = "lightonocr"
     COGVLM = "cogvlm"
     JANUS_PRO = "janus_pro"
+    DOTSOCR = "dots_ocr"
     DEEPSEEKOCR = "deepseekocr"
     LFM2A = "lfm2a" # audio
     MUSIC_FLAMINGO = "musicflamingo" # audio
     GLM4V = "glm4v"
     YOUTUVL = "youtuvl"
     NEMOTRON_V2_VL = "nemotron_v2_vl"
+    HUNYUANOCR     = "hunyuanocr"
 
 
 # Items here are (block size, type size)
@@ -4157,6 +4175,7 @@ GGML_QUANT_SIZES: dict[GGMLQuantizationType, tuple[int, int]] = {
     GGMLQuantizationType.NVFP4:   (64, 4 + 32),
     GGMLQuantizationType.TQ3_1S:  (32, 2 + 2 + 12),
     GGMLQuantizationType.TQ4_1S:  (32, 2 + 2 + 16),
+    GGMLQuantizationType.Q1_0:    (128, 2 + 16),
 }
 
 
