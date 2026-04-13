@@ -2428,7 +2428,6 @@ ggml_tensor * llm_graph_context::build_attn(
             cur = ggml_reshape_2d(ctx0, cur, orig_v_head * n_head_v, n_tokens_cur);
         }
     }
-    auto * v_rot = is_swa ? inp->self_v_rot_swa : inp->self_v_rot;
     if (v_rot) {
         cur = ggml_mul_mat_aux(ctx0, cur, v_rot);
     }
